@@ -150,8 +150,8 @@ function verifyPassword(pw, stored) {
 // Akun awal dibuat SEKALI saat belum ada. Password bisa diganti dari menu "Ganti password".
 // Untuk produksi, sebaiknya isi lewat environment variable agar tidak tersimpan di kode.
 const SEED_USERS = [
-  ['admin', process.env.ADMIN_PASSWORD || 'TimurJaya0987', 'admin'],
-  ['superadmin', process.env.SUPERADMIN_PASSWORD || 'TimurJaya8765', 'superadmin'],
+  ['admin', process.env.ADMIN_PASSWORD || 'test123', 'admin'],
+  ['superadmin', process.env.SUPERADMIN_PASSWORD || 'test234', 'superadmin'],
 ];
 for (const [username, password, role] of SEED_USERS) {
   if (!db.prepare('SELECT 1 FROM users WHERE username = ?').get(username)) {
