@@ -4,10 +4,10 @@ Backend Node.js (Express + SQLite), frontend HTML/CSS/JS tanpa build step.
 
 ## Akun awal
 
-| Username | Peran | Password awal |
-|---|---|---|
-| `admin` | Admin | `TimurJaya0987` |
-| `superadmin` | Super admin | `TimurJaya8765` |
+| Peran |
+|---|
+| Admin |
+| Super admin |
 
 Akun dibuat sekali saat server pertama kali jalan (password disimpan ter-hash). Ganti lewat tombol **Ganti password**.
 Untuk deployment, isi password awal lewat environment variable `ADMIN_PASSWORD` dan `SUPERADMIN_PASSWORD`.
