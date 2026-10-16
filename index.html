@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Timur Jaya – Monitoring Stok Barang</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>Timur Jaya</h1>
+    <nav class="tabs" aria-label="Menu utama">
+      <button class="tab is-active" data-tab="items">Barang</button>
+      <button class="tab" data-tab="history">Riwayat</button>
+      <button class="tab" data-tab="categories">Kategori</button>
+      <button class="tab" data-tab="margin" id="tabMargin" hidden>Margin</button>
+    </nav>
+    <div class="userbox">
+      <span id="whoami" class="muted"></span>
+      <button class="btn small" id="btnPassword">Ganti password</button>
+      <button class="btn small" id="btnLogout">Keluar</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- DAFTAR BARANG -->
+    <section id="tab-items">
+      <div class="summary" id="summary"></div>
+      <div class="toolbar">
+        <input type="search" id="search" placeholder="Cari nama barang…" aria-label="Cari nama barang">
+        <select id="filterCategory" aria-label="Filter kategori"></select>
+        <select id="filterStatus" aria-label="Filter status">
+          <option value="">Semua status</option>
+          <option value="aman">Aman</option>
+          <option value="menipis">Menipis</option>
+          <option value="kurang">Barang kurang</option>
+        </select>
+        <button class="btn primary" id="btnAddItem">Tambah barang</button>
+      </div>
+      <div class="table-wrap" id="itemsTable"></div>
+    </section>
+
+    <!-- HALAMAN DETAIL BARANG -->
+    <section id="view-item" hidden></section>
+
+    <!-- RIWAYAT -->
+    <section id="tab-history" hidden>
+      <div class="toolbar">
+        <input type="search" id="searchHistory" placeholder="Cari berdasarkan nama barang atau nama pengupdate…" aria-label="Cari riwayat">
+      </div>
+      <div class="hist-box" id="historyTable" data-scope="global"></div>
+    </section>
+
+    <!-- KATEGORI -->
+    <section id="tab-categories" hidden>
+      <form class="toolbar" id="formCategory">
+        <input type="text" id="categoryName" placeholder="Nama kategori baru, mis. Pakaian" maxlength="60" required aria-label="Nama kategori">
+        <button class="btn primary" type="submit">Simpan kategori</button>
+      </form>
+      <div class="table-wrap" id="categoriesTable"></div>
+    </section>
+
+    <!-- MARGIN (super admin) -->
+    <section id="tab-margin" hidden>
+      <div class="seg" id="periodBtns" role="group" aria-label="Periode">
+        <button class="seg-btn is-active" data-type="day">Harian</button>
+        <button class="seg-btn" data-type="month">Bulanan</button>
+        <button class="seg-btn" data-type="year">Tahunan</button>
+        <button class="seg-btn" data-type="all">Semua</button>
+      </div>
+      <div class="period-nav" id="periodNav">
+        <button class="btn small" id="mPrev" aria-label="Periode sebelumnya">‹</button>
+        <input id="mDate" type="date" aria-label="Pilih periode">
+        <button class="btn small" id="mNext" aria-label="Periode berikutnya">›</button>
+        <button class="btn small" id="mToday">Hari ini</button>
+      </div>
+      <div id="marginBody"></div>
+    </section>
+  </main>
+
+  <!-- Input file tersembunyi untuk upload foto dari halaman detail / riwayat -->
+  <input type="file" id="itemPhotoUpload" accept="image/jpeg,image/png,image/webp" hidden>
+  <input type="file" id="proofInput" accept="image/jpeg,image/png,image/webp" hidden>
+
+  <!-- Dialog: tambah barang -->
+  <dialog id="dlgItem">
+    <form id="formItem" class="dlg">
+      <h2>Tambah barang</h2>
+      <label>Nama barang
+        <input name="name" required maxlength="120" placeholder="mis. Kaos polos lengan pendek">
+      </label>
+      <label>Kategori
+        <select name="category_id" id="itemCategory" required></select>
+      </label>
+      <p class="hint" id="noCategoryHint" hidden>Belum ada kategori. Buat kategori dulu di menu Kategori.</p>
+      <label>Foto barang (opsional)
+        <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" id="itemPhotoInput">
+      </label>
+      <img id="itemPhotoPreview" class="preview" alt="Pratinjau foto barang" hidden>
+      <div class="row two">
+        <label>Satuan
+          <input name="unit" value="pcs" maxlength="20" required>
+        </label>
+        <label>Stok minimal (total)
+          <input name="min_stock" type="number" min="0" step="1" value="0" required>
+        </label>
+      </div>
+      <label class="check"><input type="checkbox" id="hasSizes"> Barang ini punya ukuran (stok tiap ukuran berbeda)</label>
+      <label id="stockField">Stok awal
+        <input name="stock" type="number" min="0" step="1" value="0">
+      </label>
+      <label class="super-only" id="itemCostField">Harga modal per unit (Rp, opsional)
+        <input class="money" name="cost_price" inputmode="numeric" autocomplete="off" placeholder="mis. 25.000">
+      </label>
+      <div id="sizesBox" hidden>
+        <p class="hint">Isi nama ukuran, stok<span class="super-only"> dan modal</span>, mis. S, M, L atau 38, 39, 40.</p>
+        <div id="sizeRows"></div>
+        <button type="button" class="btn small" id="btnAddSizeRow">Tambah baris ukuran</button>
+      </div>
+      <label>Nama penginput
+        <input name="updated_by" required minlength="2" maxlength="60" placeholder="Nama Anda" autocomplete="name">
+      </label>
+      <p class="error" id="errItem" role="alert"></p>
+      <div class="actions">
+        <button type="button" class="btn" data-close>Batal</button>
+        <button type="submit" class="btn primary">Simpan barang</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Dialog: update stok -->
+  <dialog id="dlgStock">
+    <form id="formStock" class="dlg">
+      <h2>Update stok</h2>
+      <p class="hint" id="stockInfo"></p>
+      <label id="sizeField">Ukuran
+        <select name="size_id" id="stockSize"></select>
+      </label>
+      <fieldset>
+        <legend>Jenis perubahan</legend>
+        <label class="radio"><input type="radio" name="type" value="in" checked> Barang masuk</label>
+        <label class="radio"><input type="radio" name="type" value="out"> Barang keluar (terjual)</label>
+        <label class="radio"><input type="radio" name="type" value="set"> Koreksi (isi stok sebenarnya)</label>
+      </fieldset>
+      <label><span id="qtyLabel">Jumlah masuk</span>
+        <input name="quantity" type="number" min="1" step="1" required>
+      </label>
+      <p class="notice" id="stockWarn" hidden></p>
+      <label id="priceField" hidden>Harga jual per unit (Rp)
+        <input class="money" name="sell_price" inputmode="numeric" autocomplete="off" placeholder="mis. 45.000">
+      </label>
+      <label>Nama pengupdate
+        <input name="updated_by" required minlength="2" maxlength="60" placeholder="Nama Anda" autocomplete="name">
+      </label>
+      <label>Catatan (opsional)
+        <input name="note" maxlength="300" placeholder="mis. Pembelian dari supplier">
+      </label>
+      <label>Foto bukti (opsional)
+        <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" id="photoInput">
+      </label>
+      <img id="photoPreview" class="preview" alt="Pratinjau foto bukti" hidden>
+      <p class="error" id="errStock" role="alert"></p>
+      <div class="actions">
+        <button type="button" class="btn" data-close>Batal</button>
+        <button type="submit" class="btn primary">Simpan perubahan</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Dialog: tambah ukuran ke barang yang sudah ada -->
+  <dialog id="dlgSize">
+    <form id="formSize" class="dlg">
+      <h2>Tambah ukuran</h2>
+      <p class="hint" id="sizeInfo"></p>
+      <label>Nama ukuran
+        <input name="label" required maxlength="20" placeholder="mis. XL atau 42">
+      </label>
+      <label><span id="sizeStockLabel">Stok ukuran ini</span>
+        <input name="stock" type="number" min="0" step="1" value="0">
+      </label>
+      <label class="super-only">Harga modal ukuran ini (Rp, opsional)
+        <input class="money" name="cost_price" inputmode="numeric" autocomplete="off">
+      </label>
+      <label>Nama pengupdate
+        <input name="updated_by" required minlength="2" maxlength="60" placeholder="Nama Anda" autocomplete="name">
+      </label>
+      <p class="error" id="errSize" role="alert"></p>
+      <div class="actions">
+        <button type="button" class="btn" data-close>Batal</button>
+        <button type="submit" class="btn primary">Simpan ukuran</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Dialog: edit barang (super admin) -->
+  <dialog id="dlgEdit">
+    <form id="formEdit" class="dlg">
+      <h2>Edit barang</h2>
+      <label>Nama barang
+        <input name="name" required maxlength="120">
+      </label>
+      <label id="editCostField">Harga modal per unit (Rp)
+        <input class="money" name="cost_price" inputmode="numeric" autocomplete="off" placeholder="Kosongkan jika belum ada">
+      </label>
+      <p class="hint" id="editCostHint" hidden>Barang ini memakai ukuran. Modal diatur pada tiap ukuran di tabel “Stok per ukuran”.</p>
+      <p class="hint">Mengubah modal di sini hanya berlaku untuk penjualan berikutnya. Keuntungan penjualan yang sudah tercatat tidak berubah. Untuk mengubahnya, gunakan halaman Margin.</p>
+      <p class="error" id="errEdit" role="alert"></p>
+      <div class="actions">
+        <button type="button" class="btn" data-close>Batal</button>
+        <button type="submit" class="btn primary">Simpan</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Dialog: modal per ukuran (super admin) -->
+  <dialog id="dlgCost">
+    <form id="formCost" class="dlg">
+      <h2>Harga modal ukuran</h2>
+      <p class="hint" id="costInfo"></p>
+      <label>Harga modal per unit (Rp)
+        <input class="money" name="cost_price" inputmode="numeric" autocomplete="off" placeholder="Kosongkan jika belum ada">
+      </label>
+      <p class="hint">Hanya berlaku untuk penjualan berikutnya. Keuntungan penjualan yang sudah tercatat tidak berubah.</p>
+      <p class="error" id="errCost" role="alert"></p>
+      <div class="actions">
+        <button type="button" class="btn" data-close>Batal</button>
+        <button type="submit" class="btn primary">Simpan</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Dialog: stok minimal (admin dan super admin) -->
+  <dialog id="dlgMin">
+    <form id="formMin" class="dlg">
+      <h2>Stok minimal</h2>
+      <p class="hint" id="minInfo"></p>
+      <label>Stok minimal (total semua ukuran)
+        <input name="min_stock" type="number" min="0" step="1" required>
+      </label>
+      <p class="hint">Barang berstatus “Menipis” saat total stoknya sama dengan atau di bawah angka ini.</p>
+      <p class="error" id="errMin" role="alert"></p>
+      <div class="actions">
+        <button type="button" class="btn" data-close>Batal</button>
+        <button type="submit" class="btn primary">Simpan</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Dialog: edit harga jual & modal pada penjualan (super admin, dari Margin) -->
+  <dialog id="dlgSale">
+    <form id="formSale" class="dlg">
+      <h2>Edit harga penjualan</h2>
+      <p class="hint" id="saleInfo"></p>
+      <label>Harga jual per unit (Rp)
+        <input class="money" name="sell_price" inputmode="numeric" autocomplete="off" required>
+      </label>
+      <label>Harga modal per unit (Rp)
+        <input class="money" name="cost_price" inputmode="numeric" autocomplete="off" placeholder="Kosongkan jika belum ada">
+      </label>
+      <label class="check" id="applyEmptyField"><input type="checkbox" name="apply_to_empty"> Isi juga penjualan lain barang ini yang modalnya masih kosong</label>
+      <p class="preview-profit" id="saleProfit"></p>
+      <p class="error" id="errSale" role="alert"></p>
+      <div class="actions">
+        <button type="button" class="btn" data-close>Batal</button>
+        <button type="submit" class="btn primary">Simpan</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Dialog: konfirmasi (batalkan / hapus / hapus barang) -->
+  <dialog id="dlgConfirm">
+    <form method="dialog" class="dlg">
+      <h2 id="confirmTitle"></h2>
+      <div id="confirmBody" class="confirm-body"></div>
+      <div class="actions">
+        <button class="btn" value="cancel">Kembali</button>
+        <button class="btn danger-solid" value="ok" id="confirmOk"></button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Dialog: ganti password -->
+  <dialog id="dlgPassword">
+    <form id="formPassword" class="dlg">
+      <h2>Ganti password</h2>
+      <label>Password lama
+        <input name="current" type="password" required autocomplete="current-password">
+      </label>
+      <label>Password baru (minimal 8 karakter)
+        <input name="next" type="password" required minlength="8" autocomplete="new-password">
+      </label>
+      <label>Ulangi password baru
+        <input name="confirm" type="password" required minlength="8" autocomplete="new-password">
+      </label>
+      <p class="error" id="errPassword" role="alert"></p>
+      <div class="actions">
+        <button type="button" class="btn" data-close>Batal</button>
+        <button type="submit" class="btn primary">Simpan password</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
